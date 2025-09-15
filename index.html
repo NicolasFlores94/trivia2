@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🍻 Trivia y Ruleta del Bar</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🍻 Trivia del Bar</h1>
+
+    <!-- Trivia -->
+    <section class="card" id="trivia-section">
+      <div id="trivia-container">
+        <h2>🎮 Ingresá tus datos</h2>
+        <input type="text" id="playerName" placeholder="Nombre">
+        <input type="text" id="playerPhone" placeholder="Celular">
+        <button id="startTrivia" class="btn">Comenzar Trivia</button>
+      </div>
+    </section>
+
+    <!-- Ruleta -->
+    <section class="card">
+      <h2>🎡 Ruleta de Premios</h2>
+      <div class="wheel-container">
+        <canvas id="wheel" width="300" height="300"></canvas>
+        <canvas id="wheelLights" width="300" height="300" class="lights"></canvas>
+        <canvas id="confettiCanvas" width="300" height="300" class="confetti"></canvas>
+        <div class="pointer">🎯</div>
+      </div>
+      <button id="spinBtn" class="btn" disabled>Girar Ruleta</button>
+      <p id="result"></p>
+    </section>
+
+    <!-- Ranking -->
+    <section class="card">
+      <h2>🏆 Ranking semanal</h2>
+      <ol id="ranking-list"></ol>
+      <button id="resetRanking" class="btn reset">Resetear Ranking</button>
+    </section>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>
