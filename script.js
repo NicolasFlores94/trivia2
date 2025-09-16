@@ -1,25 +1,11 @@
 // ==========================
-// 🎯 Mesa única por QR (1 juego cada 12 horas)
+// 🎯 Mesa única por QR (con backend Node.js)
 // ==========================
 function getMesaID() {
   const params = new URLSearchParams(window.location.search);
   return params.get("mesa") || "default";
 }
 const mesaID = getMesaID();
-
-function canPlayMesa() {
-  const lastPlay = localStorage.getItem(`mesa-${mesaID}`);
-  if(!lastPlay) return true;
-  const last = parseInt(lastPlay);
-  return (Date.now() - last) >= 12*60*60*1000;
-}
-function markPlayedMesa() { localStorage.setItem(`mesa-${mesaID}`, Date.now()); }
-function timeRemainingMesa() {
-  const last = parseInt(localStorage.getItem(`mesa-${mesaID}`));
-  if(!last) return 0;
-  const diff = 12*60*60*1000 - (Date.now() - last);
-  return diff > 0 ? diff : 0;
-}
 
 // ==========================
 // 🎮 Trivia
@@ -47,10 +33,27 @@ function checkAnswer(optionDiv) {
   else{ optionDiv.classList.add("incorrect"); document.querySelectorAll(".option").forEach(opt=>{ if(opt.textContent===q.answer) opt.classList.add("correct"); }); }
   setTimeout(()=>{ currentQuestion++; if(currentQuestion<questions.length){ showQuestion(); } else { endTrivia(); } },1500);
 }
-function endTrivia(){
+
+async function endTrivia(){
   wonTrivia = score === questions.length;
   spinBtn.disabled = !wonTrivia;
-  saveScore(playerName, playerPhone, score);
+
+  // Guardar en el backend
+  try {
+    await fetch("/api/play", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        nombre: playerName,
+        celular: playerPhone,
+        mesa: mesaID,
+        puntos: score
+      })
+    });
+  } catch (err) {
+    console.error("Error guardando en backend", err);
+  }
+
   renderRanking();
   triviaContainer.innerHTML = `<p>Terminaste la trivia 🎉</p>
     <p>Puntuación: ${score}/${questions.length}</p>
@@ -66,39 +69,41 @@ function showLogin(){
     <button id="startTrivia" class="btn">Comenzar Trivia</button>`;
   document.getElementById("startTrivia").addEventListener("click", startTrivia);
 }
-function startTrivia(){
-  if(!canPlayMesa()){
-    const remaining = timeRemainingMesa();
-    const hours = Math.floor(remaining/(1000*60*60));
-    const minutes = Math.floor((remaining%(1000*60*60))/(1000*60));
-    alert(`⚠️ Esta mesa ya jugó. Volvé a jugar en ${hours}h ${minutes}m.`);
+
+async function startTrivia(){
+  // Verificar con el backend si la mesa está libre
+  const res = await fetch(`/api/check/${mesaID}`);
+  const data = await res.json();
+  if (!data.libre) {
+    alert("⚠️ Esta mesa ya jugó, espera a la próxima visita.");
     return;
   }
+
   playerName=document.getElementById("playerName").value.trim();
   playerPhone=document.getElementById("playerPhone").value.trim();
   if(!playerName||!playerPhone){ alert("⚠️ Ingresa nombre y celular."); return; }
   currentQuestion=0; score=0; wonTrivia=false; spinBtn.disabled=true; showQuestion();
-  markPlayedMesa();
 }
 startTriviaBtn.addEventListener("click", startTrivia);
 
 // ==========================
-// 🏆 Ranking
+// 🏆 Ranking (desde backend)
 // ==========================
 const rankingList=document.getElementById("ranking-list");
 const resetBtn=document.getElementById("resetRanking");
-function saveScore(name,phone,points){
-  let ranking=JSON.parse(localStorage.getItem("ranking"))||[];
-  ranking.push({name,phone,points});
-  ranking.sort((a,b)=>b.points-a.points);
-  ranking=ranking.slice(0,10);
-  localStorage.setItem("ranking",JSON.stringify(ranking));
+
+async function renderRanking(){
+  try {
+    const res = await fetch("/api/ranking");
+    const ranking = await res.json();
+    rankingList.innerHTML=ranking.map((r,i)=>`<li>🏅 ${i+1}. ${r.nombre} (${r.celular}) — ${r.puntos} pts</li>`).join("");
+  } catch (err) {
+    console.error("Error cargando ranking", err);
+  }
 }
-function renderRanking(){
-  let ranking=JSON.parse(localStorage.getItem("ranking"))||[];
-  rankingList.innerHTML=ranking.map((r,i)=>`<li>🏅 ${i+1}. ${r.name} (${r.phone}) — ${r.points} pts</li>`).join("");
-}
-resetBtn.addEventListener("click",()=>{ localStorage.removeItem("ranking"); renderRanking(); });
+resetBtn.addEventListener("click",async ()=>{
+  alert("ℹ️ El reseteo del ranking ahora debe hacerse desde el backend.");
+});
 renderRanking();
 
 // ==========================

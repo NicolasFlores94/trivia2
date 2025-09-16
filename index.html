@@ -1,46 +1,76 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🍻 Trivia y Ruleta del Bar</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>🍻 Panel Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .admin-container { max-width: 800px; margin: auto; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background: #a78bfa; }
+    td button { padding: 5px 10px; }
+  </style>
 </head>
 <body>
-  <div class="container">
-    <h1>🍻 Trivia del Bar</h1>
+  <div class="admin-container">
+    <h1>🍻 Panel de Administración</h1>
 
-    <!-- Trivia -->
-    <section class="card" id="trivia-section">
-      <div id="trivia-container">
-        <h2>🎮 Ingresá tus datos</h2>
-        <input type="text" id="playerName" placeholder="Nombre">
-        <input type="text" id="playerPhone" placeholder="Celular">
-        <button id="startTrivia" class="btn">Comenzar Trivia</button>
-      </div>
-    </section>
+    <h2>Mesas</h2>
+    <button id="resetAll" class="btn reset">Resetear todas</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Mesa</th>
+          <th>Estado</th>
+          <th>Última jugada</th>
+          <th>Acción</th>
+        </tr>
+      </thead>
+      <tbody id="mesasTable"></tbody>
+    </table>
 
-    <!-- Ruleta -->
-    <section class="card">
-      <h2>🎡 Ruleta de Premios</h2>
-      <div class="wheel-container">
-        <canvas id="wheel" width="300" height="300"></canvas>
-        <canvas id="wheelLights" width="300" height="300" class="lights"></canvas>
-        <canvas id="confettiCanvas" width="300" height="300" class="confetti"></canvas>
-        <div class="pointer">🎯</div>
-      </div>
-      <button id="spinBtn" class="btn" disabled>Girar Ruleta</button>
-      <p id="result"></p>
-    </section>
-
-    <!-- Ranking -->
-    <section class="card">
-      <h2>🏆 Ranking semanal</h2>
-      <ol id="ranking-list"></ol>
-      <button id="resetRanking" class="btn reset">Resetear Ranking</button>
-    </section>
+    <h2>🏆 Ranking Global</h2>
+    <ol id="rankingList"></ol>
   </div>
 
-<script src="script.js"></script>
+  <script>
+    async function loadMesas(){
+      const res = await fetch("/api/mesas");
+      const mesas = await res.json();
+      const tbody = document.getElementById("mesasTable");
+      tbody.innerHTML = mesas.map(m =>
+        `<tr>
+          <td>${m.id}</td>
+          <td>${m.ocupado ? "🔒 Ocupada" : "✅ Libre"}</td>
+          <td>${m.ultima_jugada ? new Date(m.ultima_jugada).toLocaleString() : "-"}</td>
+          <td><button onclick="resetMesa('${m.id}')">Resetear</button></td>
+        </tr>`
+      ).join("");
+    }
+
+    async function resetMesa(id){
+      await fetch(`/api/reset/${id}`, { method:"POST" });
+      loadMesas();
+    }
+
+    async function resetAll(){
+      await fetch(`/api/reset-all`, { method:"POST" });
+      loadMesas();
+    }
+
+    async function loadRanking(){
+      const res = await fetch("/api/ranking");
+      const ranking = await res.json();
+      document.getElementById("rankingList").innerHTML = ranking
+        .map((r,i)=>`<li>🏅 ${i+1}. ${r.nombre} (${r.celular}) — ${r.puntos} pts</li>`)
+        .join("");
+    }
+
+    document.getElementById("resetAll").addEventListener("click", resetAll);
+
+    loadMesas();
+    loadRanking();
+  </script>
 </body>
 </html>
